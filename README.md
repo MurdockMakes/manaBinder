@@ -1,29 +1,52 @@
-# Mana Trade Binder
+# ManaBinder
 
-Mana is a browser-based prototype for public Magic trade binders and balanced trade requests.
+ManaBinder is a production-shaped Magic: The Gathering trade binder app. It has server-side login, persistent user data, Massachusetts WPN store selection, printing-aware binders, and a Magic-inspired interface.
 
 ## Run
 
-Open `index.html` directly, or serve the folder locally:
-
 ```sh
-python3 -m http.server 4173
+npm run import:cards
+npm start
 ```
 
-Then visit `http://127.0.0.1:4173/index.html`.
+Then open `http://127.0.0.1:4174`.
 
-## Implemented
+## Store Import
 
-- Account creation prompts only for email, site-wide nickname, and password.
-- Email validation accepts any normal email provider, not just Gmail.
-- Store preferences are managed separately from account creation.
-- Users can add cards to a public binder with visible card wear and notes.
-- Public binders can be searched by the user's stores, all stores, area, and card name.
-- Trade requests start from public binder cards.
-- Trade fairness uses hidden card values and condition adjustments.
-- Users only see balance guidance: add more, remove, or about even.
-- Requests can only be sent when the hidden value difference is inside a tight margin.
+ManaBinder imports Massachusetts stores from the official Wizards Store and Event Locator GraphQL service.
 
-## Price Data
+```sh
+npm run import:stores:ma
+```
 
-The current version uses seeded local card values so the app works without a backend. For production, replace the `price` values in `app.js` with a server-side market-price feed and keep prices out of client-visible UI.
+The importer queries stores near the geographic center of Massachusetts, filters returned addresses to `MA`, and writes `data/stores.massachusetts.json` with Wizards store IDs and source metadata.
+
+## Card Library Import
+
+ManaBinder imports Scryfall Default Cards bulk data into a local searchable card catalog:
+
+```sh
+npm run import:cards
+```
+
+The importer writes `data/cards.scryfall.json` with card identities, paper printings, set metadata, treatments, rarity, and image URLs. It intentionally omits prices.
+
+## Current Production Foundation
+
+- Server-side signup, login, logout, and HttpOnly session cookies.
+- Salted `scrypt` password hashes.
+- JSON persistence in `data/db.json` for local development.
+- WPN store dataset in `data/stores.massachusetts.json`.
+- Full local Magic card library in `data/cards.scryfall.json`.
+- Printing-specific binder entries.
+- Public binder search by selected store.
+- Card prices are not stored in listings and are omitted from catalog/search API responses.
+- Scryfall prices are polled only while quoting or sending a trade request.
+
+## Next Production Steps
+
+- Replace JSON files with Postgres or another managed database.
+- Set `SESSION_SECRET` in the deployment environment.
+- Add CSRF protection before public deployment.
+- Expand trade-request APIs and notifications.
+- Replace the sample card catalog with a Scryfall bulk-data import.

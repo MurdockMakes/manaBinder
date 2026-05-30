@@ -1,0 +1,172 @@
+{
+  "users": [
+    {
+      "id": "user_0301fb1039b3de06",
+      "email": "amurdock1214@gmail.com",
+      "nickname": "Murdock",
+      "passwordHash": "scrypt:a12bd83cab27619e08ab662986d7ceb2:43d03b54061ab3d9e6a1ab8afb5caecfe08c3a0495193f45c63d0f8788db8b75e8e139e48df043fcd90b68fe0538e474489201752e99ed26c54d493f084e176b",
+      "storeIds": [
+        "wpn-9078",
+        "wpn-18515",
+        "wpn-5780"
+      ],
+      "binder": [],
+      "createdAt": "2026-05-30T19:27:10.206Z",
+      "collection": [
+        {
+          "id": "collection_777cadcaa9f894a2",
+          "cardId": "6ad8011d-3471-4369-9d68-b264cc027487",
+          "printingId": "870ec754-a76c-40ea-9b81-81b3dca1f62c",
+          "condition": "Near Mint",
+          "quantity": 1,
+          "location": "",
+          "addedAt": "2026-05-30T19:38:48.835Z"
+        }
+      ],
+      "lookingFor": [
+        {
+          "id": "test_want_smothering_tithe",
+          "cardId": "153376c9-dffd-458c-8ce3-a4c8269bc4e9",
+          "priority": "High",
+          "note": "Test wanted card match",
+          "addedAt": "2026-05-30T20:03:22.746Z"
+        }
+      ]
+    },
+    {
+      "id": "test_user_valley_mage",
+      "email": "valley.mage@example.test",
+      "nickname": "ValleyMage",
+      "storeIds": [
+        "wpn-18515",
+        "wpn-5780"
+      ],
+      "binder": [
+        {
+          "id": "test_binder_30de3ff8f5",
+          "cardId": "53236dd7-845a-444c-96d5-f41ed7325d8f",
+          "printingId": "9f37c5b6-a59c-45cd-9a99-e9357fe9ea1b",
+          "condition": "Lightly Played",
+          "note": "Original printing",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        },
+        {
+          "id": "test_binder_8f89e034d0",
+          "cardId": "d75b9c82-1b49-4c3e-a1b5-aeef57d6644b",
+          "printingId": "631a15c2-0a6d-4859-91e9-a08a7e756054",
+          "condition": "Near Mint",
+          "note": "",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        },
+        {
+          "id": "test_binder_0ac984d697",
+          "cardId": "153376c9-dffd-458c-8ce3-a4c8269bc4e9",
+          "printingId": "861b5889-0183-4bee-afeb-a4b2aa700a8e",
+          "condition": "Near Mint",
+          "note": "",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        }
+      ],
+      "collection": [
+        {
+          "id": "test_collection_fa12aa1ba4",
+          "cardId": "6ad8011d-3471-4369-9d68-b264cc027487",
+          "printingId": "870ec754-a76c-40ea-9b81-81b3dca1f62c",
+          "condition": "Near Mint",
+          "quantity": 2,
+          "location": "Trade case",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        }
+      ],
+      "passwordHash": "scrypt:bf68626f26f4b52ccf0986817cb3b5ec:b86ff496ef582fa2ed59f8168cb8be863636045483fab1c05b2911f2bbc8fb1e19f8db9cae4a08c0ef65ac140508d5f237db3178c5b07771a79561cd94e7db02",
+      "createdAt": "2026-05-30T19:43:10.074Z"
+    },
+    {
+      "id": "test_user_boston_stack",
+      "email": "boston.stack@example.test",
+      "nickname": "BostonStack",
+      "storeIds": [
+        "wpn-9010",
+        "wpn-9714"
+      ],
+      "binder": [
+        {
+          "id": "test_binder_1f5e851852",
+          "cardId": "3aa83ed2-f48b-4ce6-a614-2c54ddf50538",
+          "printingId": "d5806e68-1054-458e-866d-1f2470f682b2",
+          "condition": "Near Mint",
+          "note": "Borderless",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        },
+        {
+          "id": "test_binder_3209a26e46",
+          "cardId": "697bcfe1-ecbf-42a1-bfc7-0766d48ca56b",
+          "printingId": "ae1a83c2-2d44-41ed-813f-f05c44b087f3",
+          "condition": "Near Mint",
+          "note": "",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        },
+        {
+          "id": "test_binder_e2fffea56d",
+          "cardId": "6ad8011d-3471-4369-9d68-b264cc027487",
+          "printingId": "870ec754-a76c-40ea-9b81-81b3dca1f62c",
+          "condition": "Near Mint",
+          "note": "",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        }
+      ],
+      "collection": [
+        {
+          "id": "test_collection_d80ffaa5d9",
+          "cardId": "53236dd7-845a-444c-96d5-f41ed7325d8f",
+          "printingId": "9f37c5b6-a59c-45cd-9a99-e9357fe9ea1b",
+          "condition": "Near Mint",
+          "quantity": 1,
+          "location": "Blue staples",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        }
+      ],
+      "passwordHash": "scrypt:07989918ed2b36322f55da31a7509f25:02dc869d5badf06ebd57987913fb3076d1f4fc70e786e76739990ed157a24171c5442baae871469a7e402d82e894343de5807b5308f43d311432d0c925d2aebc",
+      "createdAt": "2026-05-30T19:43:10.074Z"
+    },
+    {
+      "id": "test_user_northshore_edh",
+      "email": "northshore.edh@example.test",
+      "nickname": "NorthshoreEDH",
+      "storeIds": [
+        "wpn-9020",
+        "wpn-9538"
+      ],
+      "binder": [
+        {
+          "id": "test_binder_36a1b48f3e",
+          "cardId": "3aa83ed2-f48b-4ce6-a614-2c54ddf50538",
+          "printingId": "d5806e68-1054-458e-866d-1f2470f682b2",
+          "condition": "Near Mint",
+          "note": "Poster foil",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        },
+        {
+          "id": "test_binder_f7dc7b392b",
+          "cardId": "d75b9c82-1b49-4c3e-a1b5-aeef57d6644b",
+          "printingId": "631a15c2-0a6d-4859-91e9-a08a7e756054",
+          "condition": "Lightly Played",
+          "note": "",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        },
+        {
+          "id": "test_binder_0557366b74",
+          "cardId": "697bcfe1-ecbf-42a1-bfc7-0766d48ca56b",
+          "printingId": "ae1a83c2-2d44-41ed-813f-f05c44b087f3",
+          "condition": "Moderately Played",
+          "note": "",
+          "addedAt": "2026-05-30T19:43:10.074Z"
+        }
+      ],
+      "collection": [],
+      "passwordHash": "scrypt:33d3e1c945539f64dc0b21864ed58313:3bff50609c29a8246aa0291d81e338c18ddf2e9f73367dc3a1fb27e3b9aff8441e4a198542eaabd22f367e17bf1cb584b4d88c3f3de379ec96f21a98f10d90bc",
+      "createdAt": "2026-05-30T19:43:10.074Z"
+    }
+  ],
+  "trades": []
+}

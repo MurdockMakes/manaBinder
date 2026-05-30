@@ -1,0 +1,15 @@
+{
+  "name": "manabinder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "import:stores:ma": "node scripts/import-wpn-stores.mjs",
+    "import:cards": "node scripts/import-scryfall-cards.mjs",
+    "seed:test-users": "node scripts/seed-test-users.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
