@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ManaBinder</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="app-header">
+        <div class="brand-lockup">
+          <p class="kicker">ManaBinder</p>
+          <h1>Trade binder workspace</h1>
+        </div>
+        <nav class="tabs" aria-label="ManaBinder sections">
+          <button class="tab is-active" data-view="authView" type="button">Login</button>
+          <button class="tab" data-view="profileView" type="button">Profile</button>
+          <button class="tab" data-view="binderView" type="button">Binder</button>
+          <button class="tab" data-view="storesView" type="button">Stores</button>
+          <button class="tab" data-view="searchView" type="button">Trade</button>
+        </nav>
+      </header>
+
+      <main>
+        <section id="authView" class="view is-active">
+          <div class="section-heading">
+            <div>
+              <h2>Account Access</h2>
+              <p>Sign in to manage stores, list cards, and browse nearby binders.</p>
+            </div>
+          </div>
+          <div class="auth-grid">
+            <form id="loginForm" class="panel">
+              <div class="panel-header">
+                <h2>Login</h2>
+                <span id="sessionBadge" class="chip">Checking</span>
+              </div>
+              <label>Email<input id="loginEmail" type="email" autocomplete="email" required></label>
+              <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+              <button class="primary" type="submit">Login</button>
+            </form>
+
+            <form id="signupForm" class="panel">
+              <div class="panel-header">
+                <h2>Create Account</h2>
+                <span class="chip mana-white">Any email</span>
+              </div>
+              <label>Email<input id="signupEmail" type="email" autocomplete="email" required></label>
+              <label>Site-wide nickname<input id="signupNickname" type="text" minlength="2" maxlength="24" required></label>
+              <label>Password<input id="signupPassword" type="password" minlength="10" autocomplete="new-password" required></label>
+              <button class="primary" type="submit">Create account</button>
+            </form>
+          </div>
+          <p id="authMessage" class="message" role="status"></p>
+        </section>
+
+        <section id="profileView" class="view">
+          <div class="section-heading">
+            <div>
+              <h2>User Profile</h2>
+              <p>Review your selected stores, public binder listings, and private collection.</p>
+            </div>
+          </div>
+          <div class="profile-grid">
+            <section class="panel profile-summary">
+              <div class="panel-header">
+                <h2>Profile</h2>
+                <span id="profileStatus" class="chip">Logged out</span>
+              </div>
+              <div id="profileSummary"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Selected Stores</h2>
+                <span id="profileStoreCount" class="chip">0 stores</span>
+              </div>
+              <div id="profileStores" class="stack"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Public Binders</h2>
+                <span id="profileBinderCount" class="chip">0 cards</span>
+              </div>
+              <div id="profileBinders" class="stack"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Collection</h2>
+                <span id="profileCollectionCount" class="chip">0 items</span>
+              </div>
+              <div class="collection-controls">
+                <label>Card<select id="collectionCardSelect"></select></label>
+                <label>Printing<select id="collectionPrintingSelect"></select></label>
+                <label>Wear<select id="collectionConditionSelect"></select></label>
+                <label>Quantity<input id="collectionQuantityInput" type="number" min="1" max="99" value="1"></label>
+                <label>Location<input id="collectionLocationInput" maxlength="60" placeholder="Deck box, shelf, trade case"></label>
+                <button id="addCollectionButton" class="primary" type="button">Add to collection</button>
+              </div>
+              <div id="profileCollection" class="stack"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Looking For</h2>
+                <span id="lookingForCount" class="chip">0 cards</span>
+              </div>
+              <div class="collection-controls looking-controls">
+                <label>Find card<input id="lookingForSearchInput" type="search" placeholder="Search card library"></label>
+                <label>Card<select id="lookingForCardSelect"></select></label>
+                <label>Priority<select id="lookingForPrioritySelect">
+                  <option value="Normal">Normal</option>
+                  <option value="High">High</option>
+                  <option value="Low">Low</option>
+                </select></label>
+                <label>Note<input id="lookingForNoteInput" maxlength="80" placeholder="Commander staple, foil preferred"></label>
+                <button id="addLookingForButton" class="primary" type="button">Add wanted card</button>
+              </div>
+              <div id="lookingForList" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="binderView" class="view">
+          <div class="section-heading">
+            <div>
+              <h2>Binder Management</h2>
+              <p>Add exact printings and condition details to your public trade binder.</p>
+            </div>
+          </div>
+          <div class="workbench">
+            <aside class="panel">
+              <div class="panel-header">
+                <h2>Add Card</h2>
+                <span class="chip mana-blue">Printings</span>
+              </div>
+              <label>Card<input id="cardSearch" type="search" placeholder="Search catalog"></label>
+              <label>Wear<select id="conditionSelect"></select></label>
+              <label>Public note<input id="noteInput" maxlength="80" placeholder="Foil, signed, language"></label>
+            </aside>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Catalog</h2>
+                <span id="catalogCount" class="chip">0 cards</span>
+              </div>
+              <div id="catalog" class="card-grid"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>My Binder</h2>
+                <button id="logoutButton" type="button">Logout</button>
+              </div>
+              <div id="myBinder" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="storesView" class="view">
+          <div class="section-heading">
+            <div>
+              <h2>Store Preferences</h2>
+              <p>Select the stores where you usually trade so nearby binders can find you.</p>
+            </div>
+          </div>
+          <div class="store-layout">
+            <aside class="panel">
+              <div class="panel-header">
+                <h2>My Stores</h2>
+                <span id="storeCount" class="chip">0 selected</span>
+              </div>
+              <label>Find store<input id="storeSearch" type="search" placeholder="City, name, address"></label>
+              <button id="saveStoresButton" class="primary" type="button">Save stores</button>
+            </aside>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Massachusetts WPN Stores</h2>
+                <span class="chip mana-green">Official locator import</span>
+              </div>
+              <div id="storeList" class="store-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="searchView" class="view">
+          <div class="section-heading">
+            <div>
+              <h2>Local Binder Search</h2>
+              <p>Find public binders connected to Massachusetts WPN stores.</p>
+            </div>
+          </div>
+          <div class="store-layout">
+            <aside class="panel">
+              <div class="panel-header">
+                <h2>Find Binders</h2>
+                <span class="chip mana-black">Local</span>
+              </div>
+              <label>Store<select id="binderStoreFilter"></select></label>
+              <label class="toggle-row"><input id="wantedOnlyToggle" type="checkbox" checked> Show cards I want</label>
+            </aside>
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Public Binders</h2>
+                <span class="chip">Prices hidden</span>
+              </div>
+              <div id="binderResults" class="stack"></div>
+            </section>
+            <section class="panel trade-draft-panel">
+              <div class="panel-header">
+                <h2>Trade Request</h2>
+                <span id="tradeQuoteBadge" class="chip">No draft</span>
+              </div>
+              <div id="tradeDraft"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
