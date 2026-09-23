@@ -1,0 +1,31 @@
+{
+  "at": "2026-09-23T17:01:45.736Z",
+  "node": "v22.23.2",
+  "cards": 35736,
+  "printings": 102186,
+  "users": 100,
+  "inventoryItems": 2000,
+  "catalogLoadMs": 390.47,
+  "rssBytes": 380002304,
+  "endpoints": {
+    "/api/cards?q=ring": {
+      "requests": 20,
+      "p50Ms": 3.98,
+      "p95Ms": 6.6,
+      "bytes": 35765
+    },
+    "/api/session": {
+      "requests": 20,
+      "p50Ms": 2.06,
+      "p95Ms": 3.94,
+      "bytes": 63797
+    },
+    "/api/binders": {
+      "requests": 20,
+      "p50Ms": 12.16,
+      "p95Ms": 14.64,
+      "bytes": 129203
+    }
+  },
+  "limitations": "Local sequential warm requests; not a throughput or cloud capacity claim. Session is anonymous. Includes database seed memory."
+}

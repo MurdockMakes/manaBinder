@@ -1,0 +1,8 @@
+.git
+node_modules
+work
+test
+test-results
+data/db.json
+.env*
+outputs
