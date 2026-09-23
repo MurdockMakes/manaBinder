@@ -6,8 +6,9 @@ import { createApp } from "../src/app.js";
 import { unseal, digest } from "../src/security.js";
 import { fork } from "node:child_process";
 import { backup, restore } from "../src/backup.js";
-import { database, migrate } from "../src/db.js";
+import { database, migrate, transaction } from "../src/db.js";
 import { importLegacy } from "../scripts/import-legacy.mjs";
+import { expireTrades } from "../src/trades.js";
 import { deliverMail } from "../src/accounts.js";
 test("PostgreSQL security, concurrency and full trading regression", async (t) => {
   const db = await testDatabase();
@@ -316,6 +317,7 @@ test("PostgreSQL security, concurrency and full trading regression", async (t) =
       "UPDATE trades SET expires_at=now()-interval '1 minute' WHERE id=$1",
       [again.body.id],
     );
+    await transaction(db.pool, expireTrades);
     await a.request("/api/trades");
     assert.equal(
       (
@@ -400,6 +402,7 @@ test("PostgreSQL security, concurrency and full trading regression", async (t) =
   await t.test("mail webhook sandbox retries then clears encrypted payload",async()=>{
     const mailConfig={...settings,mailMode:'webhook',mailWebhook:'https://mail.example.test',mailToken:'sandbox-only'};
     let failedId;await deliverMail(db.pool,mailConfig,{fetcher:async(_url,options)=>{failedId=options.headers['idempotency-key'];return new Response('',{status:503});}});
+    await db.pool.query("UPDATE mail_outbox SET available_at=now() WHERE attempts>0 AND status='pending'");
     let delivered;await deliverMail(db.pool,mailConfig,{fetcher:async(_url,options)=>{assert.equal(options.headers['idempotency-key'],failedId);delivered=JSON.parse(options.body);return new Response('',{status:200});}});
     assert.ok(delivered.url.startsWith(settings.origin));assert.ok(delivered.to.endsWith('@example.test'));assert.equal((await db.pool.query("SELECT sealed_message FROM mail_outbox WHERE status='sent' LIMIT 1")).rows[0].sealed_message,null);
   });

@@ -63,6 +63,25 @@ try {
       bytes,
     };
   }
+  const concurrentDurations = [];
+  const concurrentStart = performance.now();
+  await Promise.all(
+    Array.from({ length: 20 }, async () => {
+      for (let i = 0; i < 8; i++) {
+        const started = performance.now();
+        const response = await fetch(
+          config.origin +
+            ["/api/cards?q=ring", "/api/session", "/api/binders"][i % 3],
+        );
+        if (!response.ok)
+          throw Error("Concurrent benchmark failed " + response.status);
+        await response.text();
+        concurrentDurations.push(performance.now() - started);
+      }
+    }),
+  );
+  const concurrentMs = performance.now() - concurrentStart;
+  concurrentDurations.sort((a, b) => a - b);
   const report = {
     at: new Date().toISOString(),
     node: process.version,
@@ -73,8 +92,15 @@ try {
     catalogLoadMs: +loadMs.toFixed(2),
     rssBytes: process.memoryUsage().rss,
     endpoints,
+    concurrentReads: {
+      clients: 20,
+      requests: 160,
+      p95Ms: +concurrentDurations[151].toFixed(2),
+      elapsedMs: +concurrentMs.toFixed(2),
+      requestsPerSecond: +(160000 / concurrentMs).toFixed(2),
+    },
     limitations:
-      "Local sequential warm requests; not a throughput or cloud capacity claim. Session is anonymous. Includes database seed memory.",
+      "Local warm requests and a short 20-client read burst on one process; not a sustained throughput or cloud capacity claim. Session is anonymous. Includes database seed memory. Does not measure broker, real prices or authenticated writes.",
   };
   await mkdir("work", { recursive: true });
   await writeFile("work/benchmark.json", JSON.stringify(report, null, 2));

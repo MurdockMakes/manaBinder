@@ -35,6 +35,7 @@ export function createApp({
   config,
   getPrices,
   logger = console.log,
+  telemetry,
 }) {
   const trades = createTrades(pool, catalog, getPrices),
     metrics = { requests: 0, errors: 0 };
@@ -106,7 +107,9 @@ export function createApp({
       }
       if (path === "/readyz") {
         const schema = await pool
-          .query("SELECT 1 FROM schema_migrations WHERE name='001-initial.sql'")
+          .query(
+            "SELECT 1 FROM schema_migrations WHERE name='002-distributed-jobs.sql'",
+          )
           .catch(() => {
             throw new HttpError(503, "Database unavailable");
           });
@@ -206,7 +209,7 @@ export function createApp({
               [id("user"), email, nickname, hash],
             )
           ).rows[0];
-          await enqueueAccountMail(c, u, "verify", config);
+          await enqueueAccountMail(c, u, "verify", config, requestId);
           await newSession(c, req, res, u.id, config.production);
           return u;
         });
@@ -253,7 +256,7 @@ export function createApp({
               [email],
             )
           ).rows[0];
-          if (u) await enqueueAccountMail(c, u, "reset", config);
+          if (u) await enqueueAccountMail(c, u, "reset", config, requestId);
         });
         json(200, {
           ok: true,
@@ -301,7 +304,7 @@ export function createApp({
         fields(body, []);
         await rateLimit(pool, `verify:${user.id}`, 2);
         await transaction(pool, (c) =>
-          enqueueAccountMail(c, user, "verify", config),
+          enqueueAccountMail(c, user, "verify", config, requestId),
         );
         json(200, { ok: true });
         return;
@@ -456,7 +459,7 @@ export function createApp({
           check(
             !(
               await c.query(
-                "SELECT 1 FROM trade_items ti JOIN trades t ON t.id=ti.trade_id WHERE ti.item_id=$1 AND t.status='accepted'",
+                "SELECT 1 FROM trade_items ti JOIN trades t ON t.id=ti.trade_id WHERE ti.item_id=$1 AND t.status='accepted' AND t.expires_at>now()",
                 [remove[2]],
               )
             ).rowCount,
@@ -560,28 +563,36 @@ export function createApp({
               : [],
           ),
           binders = [];
-        for (const u of owners.slice(0, limit)) {
-          const storeIds = (
-            await pool.query(
-              "SELECT store_id FROM user_stores WHERE user_id=$1",
-              [u.id],
-            )
-          ).rows.map((s) => s.store_id);
-          const items = (
-            await pool.query(
-              "SELECT * FROM inventory WHERE user_id=$1 AND kind='binder' AND quantity>0 ORDER BY id LIMIT 1000",
-              [u.id],
-            )
-          ).rows;
+        const selectedOwners = owners.slice(0, limit),
+          ownerIds = selectedOwners.map((u) => u.id);
+        const [storeRows, itemRows] = await Promise.all([
+          pool.query(
+            "SELECT user_id,store_id FROM user_stores WHERE user_id=ANY($1::text[])",
+            [ownerIds],
+          ),
+          pool.query(
+            "SELECT i.* FROM unnest($1::text[]) AS owners(user_id) CROSS JOIN LATERAL (SELECT * FROM inventory WHERE user_id=owners.user_id AND kind='binder' AND quantity>0 ORDER BY id LIMIT 1000) i",
+            [ownerIds],
+          ),
+        ]);
+        const storesByUser = new Map(ownerIds.map((id) => [id, new Set()])),
+          itemsByUser = new Map(ownerIds.map((id) => [id, []]));
+        for (const row of storeRows.rows)
+          storesByUser.get(row.user_id).add(row.store_id);
+        for (const row of itemRows.rows) itemsByUser.get(row.user_id).push(row);
+        for (const u of selectedOwners)
           binders.push({
             ...u,
-            stores: catalog.stores.filter((s) => storeIds.includes(s.id)),
-            binder: items.map((i) => ({
-              ...catalog.item(i),
-              wantedMatch: wantIds.has(i.card_id),
-            })),
+            stores: catalog.stores.filter((store) =>
+              storesByUser.get(u.id).has(store.id),
+            ),
+            binder: itemsByUser
+              .get(u.id)
+              .map((i) => ({
+                ...catalog.item(i),
+                wantedMatch: wantIds.has(i.card_id),
+              })),
           });
-        }
         json(200, {
           binders,
           nextOffset: owners.length > limit ? offset + limit : null,
@@ -608,7 +619,6 @@ export function createApp({
         requireUser();
         const before = url.searchParams.get("before") || "9999-01-01";
         check(Number.isFinite(Date.parse(before)), 400, "Invalid cursor");
-        await transaction(pool, expireTrades);
         const result = (
           await pool.query(
             "SELECT id,from_user,to_user,status,confirmed_from,confirmed_to,created_at,expires_at FROM trades WHERE (from_user=$1 OR to_user=$1) AND created_at<$2 ORDER BY created_at DESC LIMIT 50",
@@ -803,7 +813,8 @@ export function createApp({
     } catch (error) {
       metrics.errors++;
       let status = error.status || 500;
-      if (error.code === "23505" || error.code === "23503") status = 409;
+      if (["23505", "23503", "40001", "40P01", "55P03"].includes(error.code))
+        status = 409;
       if (status === 429) res.setHeader("retry-after", "60");
       json(status, {
         error:
@@ -811,12 +822,13 @@ export function createApp({
             ? "Server error"
             : error.code === "23505"
               ? "Account or item already exists"
-              : error.code === "23503"
-                ? "Related data changed"
+              : ["23503", "40001", "40P01", "55P03"].includes(error.code)
+                ? "Data changed concurrently; retry the operation"
                 : error.message,
         requestId,
       });
     } finally {
+      telemetry?.observe(req, res.statusCode, (Date.now() - started) / 1000);
       logger(
         JSON.stringify({
           event: "request",

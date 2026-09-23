@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-for (const dir of ["src", "scripts", "public", "test"])
+for (const dir of ["src", "scripts", "public", "test", "services"])
   for (const file of await readdir(dir)) {
     if (!/\.(m?js)$/.test(file)) continue;
     const r = spawnSync(process.execPath, ["--check", `${dir}/${file}`], {

@@ -4,10 +4,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --chown=node:node server.js ./
 COPY --chown=node:node src ./src
+COPY --chown=node:node services ./services
 COPY --chown=node:node public ./public
 COPY --chown=node:node scripts ./scripts
 COPY --chown=node:node migrations ./migrations
 COPY --chown=node:node data/cards.scryfall.json data/stores.massachusetts.json ./data/
+RUN mkdir -p /mail && chown node:node /mail
 USER node
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4174
 EXPOSE 4174

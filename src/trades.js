@@ -1,9 +1,10 @@
 import { check, fields, string, integer, id, digest } from "./security.js";
 import { transaction } from "./db.js";
 import { fairness } from "./pricing.js";
-export async function expireTrades(db) {
+export async function expireTrades(db, tradeId = null) {
   const r = await db.query(
-    "UPDATE trades SET status='expired' WHERE status IN ('pending','accepted') AND expires_at<now() RETURNING id,from_user,to_user",
+    "UPDATE trades SET status='expired' WHERE id IN (SELECT id FROM trades WHERE status IN ('pending','accepted') AND expires_at<now() AND ($1::text IS NULL OR id=$1) ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 100) RETURNING id,from_user,to_user",
+    [tradeId],
   );
   for (const t of r.rows) await event(db, t, null, "expired");
 }
@@ -148,7 +149,6 @@ export function createTrades(pool, catalog, getPrices) {
       const quote = fairness(s.requested, s.offered, prices);
       check(quote.state === "even", 409, quote.message);
       return transaction(pool, async (c) => {
-        await expireTrades(c);
         const repeated = (
           await c.query(
             "SELECT id,request_hash FROM trades WHERE from_user=$1 AND idempotency_key=$2",
@@ -203,7 +203,7 @@ export function createTrades(pool, catalog, getPrices) {
         "Invalid action",
       );
       return transaction(pool, async (c) => {
-        await expireTrades(c);
+        await expireTrades(c, tradeId);
         const t = (
           await c.query(
             "SELECT * FROM trades WHERE id=$1 AND (from_user=$2 OR to_user=$2) FOR UPDATE",
@@ -211,6 +211,10 @@ export function createTrades(pool, catalog, getPrices) {
           )
         ).rows[0];
         check(t, 404, "Trade not found");
+        await c.query(
+          "SELECT i.id FROM inventory i JOIN trade_items ti ON ti.item_id=i.id WHERE ti.trade_id=$1 ORDER BY i.id FOR UPDATE OF i",
+          [tradeId],
+        );
         const next = {
           accept: "accepted",
           decline: "declined",
@@ -295,7 +299,7 @@ export function createTrades(pool, catalog, getPrices) {
             const reserved = Number(
               (
                 await c.query(
-                  "SELECT COALESCE(sum(ti.quantity),0) AS n FROM trade_items ti JOIN trades t ON ti.trade_id=t.id WHERE ti.item_id=$1 AND t.status='accepted'",
+                  "SELECT COALESCE(sum(ti.quantity),0) AS n FROM trade_items ti JOIN trades t ON ti.trade_id=t.id WHERE ti.item_id=$1 AND t.status='accepted' AND t.expires_at>now()",
                   [i.item_id],
                 )
               ).rows[0].n,

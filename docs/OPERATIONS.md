@@ -53,4 +53,9 @@ For rollback: stop writes, retain a fresh backup, roll back only to an artifact 
 
 The app has no payment or shipping workflow and does not adjudicate card authenticity. Handoffs are in person. Email trade alerts and private messaging are deferred; unread in-app notices are supported. The app does not initiate unsolicited email outside requested verification/reset.
 
-Local measured catalog load was approximately 390 ms, RSS approximately 363 MiB, using 35,736 cards/102,186 printings and 100 synthetic users/2,000 listings. Sequential warm p95: search 6.60 ms, anonymous session 3.94 ms, public binder page 14.64 ms. These are not throughput guarantees. Account for PostgreSQL, concurrent requests, imports and container overhead separately. Target staging budgets: p95 below 250 ms for search/session, below 500 ms for binder pages, and measured app RSS below 512 MiB at this baseline. Benchmark write-lock contention and hostile traffic before expanding launch scale.
+Local measured catalog load was approximately 390 ms, RSS approximately 363 MiB, using 35,736 cards/102,186 printings and 100 synthetic users/2,000 listings. Sequential warm p95: search 6.60 ms, anonymous session 3.94 ms, public binder page 14.64 ms. These are not throughput guarantees. Account for PostgreSQL, concurrent requests, imports and container overhead separately. Target staging budgets: p95 below 250 ms for search/session, below 500 ms for binder pages, and measured app RSS below 512 MiB at this baseline. Benchmark transaction contention and hostile traffic before expanding launch scale.
+
+
+## Distributed services update
+
+The current branch separates API, relay, workers and scheduler, adds RabbitMQ transactional outbox delivery, and provisions Prometheus/Grafana. See [DISTRIBUTED.md](DISTRIBUTED.md) for the full startup, scaling, reliability and production adaptation guide. API startup alone no longer performs mail delivery or retention. Earlier sequential benchmark figures above are a historical baseline; current measurements are in the implementation report and reproducible with scripts/benchmark.mjs.

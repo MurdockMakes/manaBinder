@@ -1,0 +1,28 @@
+groups:
+  - name: manabinder
+    rules:
+      - alert: ManaBinderServiceDown
+        expr: up == 0
+        for: 2m
+        annotations:
+          summary: "A ManaBinder scrape target is unavailable"
+      - alert: ManaBinderHighErrorRate
+        expr: sum(rate(manabinder_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(manabinder_http_requests_total[5m])), 0.01) > 0.02
+        for: 5m
+        annotations:
+          summary: "API 5xx rate exceeds 2 percent"
+      - alert: ManaBinderMailBacklog
+        expr: max(manabinder_mail_oldest_seconds{service="scheduler"}) > 120
+        for: 5m
+        annotations:
+          summary: "Mail delivery has been delayed for over two minutes"
+      - alert: ManaBinderDeadMail
+        expr: max(manabinder_mail_failed{service="scheduler"}) > 0
+        for: 1m
+        annotations:
+          summary: "Mail jobs exhausted retries; inspect the dead-letter queue"
+      - alert: ManaBinderDatabasePoolSaturated
+        expr: manabinder_db_waiting > 5
+        for: 2m
+        annotations:
+          summary: "Application database pool is saturated"
