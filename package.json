@@ -1,15 +1,28 @@
 {
   "name": "manabinder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "import:stores:ma": "node scripts/import-wpn-stores.mjs",
     "import:cards": "node scripts/import-scryfall-cards.mjs",
-    "seed:test-users": "node scripts/seed-test-users.mjs"
+    "seed:test-users": "node scripts/seed-test-users.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "test:browser": "node test/browser.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:import-legacy": "node scripts/import-legacy.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.23.2 <23"
+  },
+  "dependencies": {
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "prettier": "3.9.9"
   }
 }
