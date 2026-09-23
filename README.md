@@ -4,7 +4,18 @@ A Magic: The Gathering binder and local trading app using Node.js, PostgreSQL an
 
 **Release status: implemented and locally tested; not approved for public launch.** See [requirement status](docs/STATUS.md) and [release runbook](docs/OPERATIONS.md). No live deployment is included.
 
-## Local setup
+## Containerized services
+
+See [distributed service setup and operations](docs/DISTRIBUTED.md) for the complete stack: Nginx, two API replicas, PostgreSQL, RabbitMQ, outbox relay, two workers, scheduler, Prometheus and Grafana. Normal writes use serializable transactions and targeted row locks; background work runs independently of API replicas. This is the recommended local setup for this branch.
+
+```sh
+node scripts/init-services-env.mjs
+docker compose --env-file .env.services -f compose.services.yaml up --build -d --wait
+```
+
+Application: http://127.0.0.1:8080. Grafana: http://127.0.0.1:3000. Credentials are generated in the ignored `.env.services`. The single-host stack needs the production adaptations and verification described in the guide before public deployment.
+
+## API-only development setup
 
 Use Node 22.23.2 (the checked-in runtime pin) and PostgreSQL 18.4. Docker Compose starts only a development database bound to loopback; its credentials are intentionally local-only.
 
@@ -16,7 +27,7 @@ node --env-file=.env scripts/migrate.mjs
 node --env-file=.env server.js
 ```
 
-Open http://127.0.0.1:4174. Sign up and open the verification link from the ignored `work/mail/` directory. File delivery is forbidden in production. The application processes one queued account email every ten seconds; a production webhook must deduplicate the supplied Idempotency-Key.
+Open http://127.0.0.1:4174. This starts only the API. Account email and retention require the relay, worker and scheduler services described above; the API no longer runs background timers. File delivery is forbidden in production, and a production webhook must deduplicate the supplied Idempotency-Key.
 
 The full catalog and 86 Massachusetts stores are already present. There is no six-card fallback. Refresh before the configured freshness deadline:
 
@@ -45,7 +56,7 @@ Without `TEST_DATABASE_URL`, tests start a disposable loopback PostgreSQL instan
 - Each party confirms physical handoff. Only the second confirmation transfers stock into private collections. Repeated confirmations cannot transfer twice. Either party may cancel an active trade; blocks/moderation also cancel active trades.
 - Finish is explicit (`nonfoil`, `foil`, `etched`); only finishes supported by the printing are accepted. Choose quantities in the draft. Unknown exact-finish prices block sending.
 - Fairness uses integer USD cents, condition-adjusted unit prices rounded to cents, multiplied by selected quantity. About-even tolerance is the larger of 75 cents or 4% of the requested total rounded to cents. Condition multipliers (100/90/78/62/45%) are estimates, not an appraisal.
-- The MVP serializes domain writes with a PostgreSQL advisory transaction lock shared by all app processes. Network price calls occur outside this lock and inventory is revalidated afterwards. This favors correctness at modest scale; benchmark contention before a high-traffic release.
+- Domain writes use PostgreSQL serializable transactions with bounded retries and targeted inventory row locks. Network calls occur outside transactions. Inventory is revalidated before committing. Benchmark write contention and database capacity before a high-traffic release.
 
 ## Data and compatibility
 

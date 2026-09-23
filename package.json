@@ -18,6 +18,8 @@
     "node": ">=22.23.2 <23"
   },
   "dependencies": {
+    "@prometheus-io/client": "0.16.1",
+    "amqplib": "2.0.1",
     "pg": "8.23.0"
   },
   "devDependencies": {

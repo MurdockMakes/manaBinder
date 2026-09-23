@@ -4,6 +4,13 @@ jobs:
   regression:
     runs-on: ubuntu-latest
     services:
+      rabbitmq:
+        image: rabbitmq:4.3.6-management
+        env:
+          RABBITMQ_DEFAULT_USER: manabinder
+          RABBITMQ_DEFAULT_PASS: ci-only
+        ports: ["5672:5672"]
+        options: --health-cmd "rabbitmq-diagnostics -q ping" --health-interval 10s --health-retries 15
       postgres:
         image: postgres:18.4
         env:
@@ -13,6 +20,7 @@ jobs:
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://postgres:ci-only@127.0.0.1:5432/manabinder_test
+      TEST_RABBITMQ_URL: amqp://manabinder:ci-only@127.0.0.1:5672
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,3 +33,5 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: docker build -t manabinder:ci .
+      - run: docker build -f deploy/Dockerfile.edge -t manabinder-edge:ci .
+      - run: node scripts/container-smoke.mjs

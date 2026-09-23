@@ -37,17 +37,52 @@ export class Catalog {
       }
     }
     this.searchNames = cards.map((c) => [c, c.name.toLowerCase()]);
+    this.grams = new Map();
+    for (let index = 0; index < this.searchNames.length; index++) {
+      const name = this.searchNames[index][1],
+        unique = new Set();
+      for (let i = 0; i < name.length - 2; i++)
+        unique.add(name.slice(i, i + 3));
+      for (const gram of unique) {
+        if (!this.grams.has(gram)) this.grams.set(gram, []);
+        this.grams.get(gram).push(index);
+      }
+    }
+    this.queryCache = new Map();
     this.storeIds = new Set(stores.map((s) => s.id));
   }
   search(query = "", limit = 40, offset = 0) {
     const q = query.toLowerCase();
-    const found = this.searchNames.filter(([, n]) => n.includes(q));
+    if (!q)
+      return {
+        cards: this.cards
+          .slice(offset, offset + limit)
+          .map((c) => this.publicCard(c)),
+        nextOffset: offset + limit < this.cards.length ? offset + limit : null,
+      };
+    let found = this.queryCache.get(q);
+    if (!found) {
+      let candidates;
+      for (let i = 0; i < q.length - 2; i++) {
+        const ids = this.grams.get(q.slice(i, i + 3)) || [];
+        if (!candidates || ids.length < candidates.length) candidates = ids;
+      }
+      found = (
+        candidates
+          ? candidates.map((i) => this.searchNames[i])
+          : this.searchNames
+      ).filter(([, n]) => n.includes(q));
+    }
     if (q)
       found.sort(
         (a, b) =>
           Number(b[1] === q) - Number(a[1] === q) ||
           Number(b[1].startsWith(q)) - Number(a[1].startsWith(q)),
       );
+    this.queryCache.delete(q);
+    this.queryCache.set(q, found);
+    if (this.queryCache.size > 256)
+      this.queryCache.delete(this.queryCache.keys().next().value);
     return {
       cards: found
         .slice(offset, offset + limit)

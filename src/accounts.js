@@ -1,8 +1,13 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { token, digest, seal, unseal, check } from "./security.js";
+import { token, digest, seal } from "./security.js";
 import { transaction } from "./db.js";
-export async function enqueueAccountMail(c, user, purpose, config) {
+import { queueMail, processMail } from "./jobs.js";
+export async function enqueueAccountMail(
+  c,
+  user,
+  purpose,
+  config,
+  correlationId,
+) {
   const value = token();
   await c.query("DELETE FROM account_tokens WHERE user_id=$1 AND purpose=$2", [
     user.id,
@@ -12,8 +17,8 @@ export async function enqueueAccountMail(c, user, purpose, config) {
     "INSERT INTO account_tokens(token_hash,user_id,purpose,expires_at) VALUES($1,$2,$3,now()+interval '30 minutes')",
     [digest(value), user.id, purpose],
   );
-  await c.query(
-    "INSERT INTO mail_outbox(user_id,purpose,sealed_message) VALUES($1,$2,$3)",
+  const job = await c.query(
+    "INSERT INTO mail_outbox(user_id,purpose,sealed_message) VALUES($1,$2,$3) RETURNING id",
     [
       user.id,
       purpose,
@@ -27,62 +32,29 @@ export async function enqueueAccountMail(c, user, purpose, config) {
       ),
     ],
   );
+  await queueMail(c, job.rows[0].id, correlationId);
 }
-export async function deliverMail(pool, config, { fetcher = fetch } = {}) {
-  // A worker owns a row while delivering. Webhook consumers must deduplicate the ID.
-  const c = await pool.connect();
-  try {
-    await c.query("BEGIN");
-    const row = (
-      await c.query(
-        "SELECT * FROM mail_outbox WHERE status='pending' AND attempts<5 ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1",
-      )
-    ).rows[0];
-    if (!row) {
-      await c.query("COMMIT");
-      return false;
-    }
-    try {
-      const message = unseal(row.sealed_message, config.secret);
-      if (config.mailMode === "file") {
-        check(!config.production, 500, "File delivery disabled");
-        await mkdir(config.mailDir, { recursive: true });
-        await writeFile(
-          join(config.mailDir, `${row.id}.json`),
-          JSON.stringify(message),
-          { mode: 0o600 },
-        );
-      } else {
-        const r = await fetcher(config.mailWebhook, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${config.mailToken}`,
-            "idempotency-key": `manabinder-mail-${row.id}`,
-          },
-          body: JSON.stringify(message),
-          signal: AbortSignal.timeout(8000),
-        });
-        check(r.ok, 503, "Mail delivery failed");
-      }
-      await c.query(
-        "UPDATE mail_outbox SET status='sent',sealed_message=NULL WHERE id=$1",
-        [row.id],
-      );
-    } catch {
-      await c.query(
-        "UPDATE mail_outbox SET attempts=attempts+1,status=CASE WHEN attempts>=4 THEN 'failed' ELSE 'pending' END WHERE id=$1",
-        [row.id],
-      );
-    }
-    await c.query("COMMIT");
-    return true;
-  } catch (e) {
-    await c.query("ROLLBACK");
-    throw e;
-  } finally {
-    c.release();
-  }
+// Local test adapter; production delivery runs only through the RabbitMQ worker.
+export async function deliverMail(pool, config, options = {}) {
+  const row = (
+    await pool.query(
+      "SELECT id FROM mail_outbox WHERE status='pending' AND available_at<=now() ORDER BY id LIMIT 1",
+    )
+  ).rows[0];
+  if (!row) return false;
+  await processMail(
+    pool,
+    config,
+    {
+      version: 1,
+      type: "account.mail",
+      mailId: String(row.id),
+      eventId: "0",
+      correlationId: "local-test",
+    },
+    options,
+  );
+  return true;
 }
 export async function maintenance(pool) {
   return transaction(pool, async (c) => {
