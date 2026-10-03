@@ -107,15 +107,29 @@ try {
   await page.locator('[data-view="searchView"]').click();
   await page.locator(`[data-start-request="${b.id}"]`).click();
   let releaseQuote;
-  const gate=new Promise(resolve=>{releaseQuote=resolve;});
-  await page.route('**/api/trades/quote',async route=>{await gate;await route.fulfill({json:{state:'even',message:'Stale even quote'}});});
-  const quoteStarted=page.waitForRequest('**/api/trades/quote');
-  await page.locator('[data-trade-choice="offered"]').check();await quoteStarted;
-  await page.locator('[data-trade-choice="offered"]').uncheck();releaseQuote();
-  await page.waitForResponse('**/api/trades/quote');
-  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-  assert.equal(await page.locator('#sendTradeButton').isDisabled(),true);
-  await page.unroute('**/api/trades/quote');
+  const gate = new Promise((resolve) => {
+    releaseQuote = resolve;
+  });
+  await page.route("**/api/trades/quote", async (route) => {
+    await gate;
+    await route.fulfill({
+      json: { state: "even", message: "Stale even quote" },
+    });
+  });
+  const quoteStarted = page.waitForRequest("**/api/trades/quote");
+  await page.locator('[data-trade-choice="offered"]').check();
+  await quoteStarted;
+  await page.locator('[data-trade-choice="offered"]').uncheck();
+  releaseQuote();
+  await page.waitForResponse("**/api/trades/quote");
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  assert.equal(await page.locator("#sendTradeButton").isDisabled(), true);
+  await page.unroute("**/api/trades/quote");
   await page.locator('[data-trade-choice="offered"]').check();
   await page.waitForFunction(
     () => !document.querySelector("#sendTradeButton").disabled,
@@ -134,12 +148,48 @@ try {
   await page.waitForFunction(() =>
     document.querySelector("#tradeHistory").textContent.includes("completed"),
   );
-  await page.setViewportSize({ width: 390, height: 844 });
-  assert.ok(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth + 1,
-    ),
+  // Stress the actual history renderer with a valid, consistently wide peer ID.
+  const widePeerId = "user_" + "e".repeat(32);
+  await page.route("**/api/trades", async (route) => {
+    const response = await route.fetch();
+    const payload = await response.json();
+    for (const trade of payload.trades) {
+      if (trade.from_user === a.id) trade.to_user = widePeerId;
+      else trade.from_user = widePeerId;
+    }
+    await route.fulfill({ response, json: payload });
+  });
+  await page.locator('[data-view="historyView"]').click();
+  await page.waitForFunction(
+    (peer) =>
+      document.querySelector("#tradeHistory").textContent.includes(peer),
+    widePeerId,
   );
+  async function assertMobileFits(width, details) {
+    await page.setViewportSize({ width, height: 844 });
+    const layout = await page.evaluate(() => ({
+      viewport: innerWidth,
+      document: document.documentElement.scrollWidth,
+      overflowing: [...document.querySelectorAll("body *")]
+        .filter((el) => el.getBoundingClientRect().right > innerWidth + 1)
+        .map((el) => `${el.tagName}#${el.id}.${el.className}`),
+    }));
+    assert.ok(
+      layout.document <= layout.viewport + 1,
+      `History overflow at ${width}px, details=${details}: ${JSON.stringify(layout)}`,
+    );
+  }
+  for (const width of [320, 390]) await assertMobileFits(width, false);
+  await page
+    .locator("#tradeHistory")
+    .getByRole("button", { name: "Details", exact: true })
+    .click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector("#tradeHistory pre")
+      ?.textContent.includes("Test Card"),
+  );
+  for (const width of [320, 390]) await assertMobileFits(width, true);
   await page.locator('[data-view="profileView"]').click();
   await page.locator("#logoutButton").click();
   await page.waitForFunction(
