@@ -440,6 +440,17 @@ h3 {
   align-items: start;
 }
 
+#tradeHistory .row-card,
+#tradeHistory .row-card > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#tradeHistory pre {
+  grid-column: 1 / -1;
+  white-space: pre-wrap;
+}
+
 .row-card strong,
 .store-card strong {
   display: block;
@@ -581,7 +592,7 @@ h3 {
 
   .row-card,
   .store-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .metric-grid,

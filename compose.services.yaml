@@ -1,0 +1,147 @@
+x-app: &app
+  build: .
+  image: manabinder:local
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 45s
+  environment: &env
+    NODE_ENV: development
+    DATABASE_URL: postgres://manabinder:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/manabinder
+    SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET}
+    APP_ORIGIN: http://127.0.0.1:8080
+    HOST: 0.0.0.0
+    PORT: 4174
+    METRICS_HOST: 0.0.0.0
+    METRICS_PORT: 9091
+    TRUST_PROXY: "true"
+    DB_POOL_SIZE: 5
+    RABBITMQ_URL: amqp://manabinder:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672?heartbeat=10
+    MAIL_MODE: file
+    MAIL_DIR: /mail
+  networks: [backend]
+services:
+  db:
+    image: postgres:18.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: manabinder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: manabinder
+    volumes: [distributed-pg:/var/lib/postgresql]
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U manabinder]
+      interval: 5s
+      retries: 15
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: manabinder
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    volumes:
+      - rabbit-data:/var/lib/rabbitmq
+      - ./deploy/rabbitmq-plugins:/etc/rabbitmq/enabled_plugins:ro
+    ports: ["127.0.0.1:15672:15672"]
+    networks: [backend]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      retries: 15
+  migrate:
+    <<: *app
+    restart: "no"
+    command: [node, scripts/migrate.mjs]
+    healthcheck: { disable: true }
+    depends_on:
+      db: { condition: service_healthy }
+  api:
+    <<: *app
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    deploy:
+      replicas: 2
+      resources:
+        limits: { memory: 768M, cpus: "1.0" }
+  relay:
+    <<: *app
+    command: [node, services/jobs.mjs]
+    environment:
+      <<: *env
+      SERVICE_ROLE: relay
+    healthcheck: &job-health
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:9091/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+  worker:
+    <<: *app
+    command: [node, services/jobs.mjs]
+    environment:
+      <<: *env
+      SERVICE_ROLE: worker
+      WORKER_PREFETCH: 4
+    volumes: [preview-mail:/mail]
+    healthcheck: *job-health
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+    deploy:
+      replicas: 2
+  scheduler:
+    <<: *app
+    command: [node, services/jobs.mjs]
+    environment:
+      <<: *env
+      SERVICE_ROLE: scheduler
+    healthcheck: *job-health
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+  edge:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.edge
+    restart: unless-stopped
+    ports: ["127.0.0.1:8080:8080"]
+    networks: [backend]
+    depends_on:
+      api: { condition: service_healthy }
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [backend]
+  grafana:
+    image: grafana/grafana:13.2.2
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./deploy/grafana/datasource.yml:/etc/grafana/provisioning/datasources/default.yml:ro
+      - ./deploy/grafana/provider.yml:/etc/grafana/provisioning/dashboards/default.yml:ro
+      - ./deploy/grafana/dashboard.json:/var/lib/grafana/dashboards/manabinder.json:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["127.0.0.1:3000:3000"]
+    networks: [backend]
+networks:
+  backend:
+volumes:
+  distributed-pg:
+  rabbit-data:
+  preview-mail:
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: manabinder
+      POSTGRES_PASSWORD: local-only
+      POSTGRES_DB: manabinder
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U manabinder"]
+      interval: 5s
+      retries: 10
+volumes:
+  pgdata:
