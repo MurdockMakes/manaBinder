@@ -8,6 +8,7 @@ No download needed -- Will be web hosted here {URL}.
 
 
 ## Use Instructions:
+  (Screenshots will be added for all steps)
   Create an account
   
   Upload you magic the gathering collection 
