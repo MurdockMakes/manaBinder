@@ -4,11 +4,11 @@ A Magic: The Gathering binder and local trading app using Node.js, PostgreSQL an
 
 # Download Instructions:
 
-No download needed -- Will be web hosted here {URL}.
+No download needed -- web hosted here {no url yet I don't got web hosting kinda money right now}.
 
 
 ## Use Instructions:
-  (Screenshots will be added for all steps)
+  (Screenshots will be added for all steps once the front end isn't placeholder slop)
   Create an account
   
   Upload you magic the gathering collection 
@@ -24,6 +24,17 @@ Set a meeting time, once a trade is initiated (not finalized) you will get acces
   
 ## Public API Access: 
 
-Pull LGS List (populates the list of LGS locations in a .json
-Import collection as deckles -- For Moxfield collection adding it exports your full collection that has been uploaded to a deckles so that you can just add to collection, (no duplication of work!)  Eventually I will get around to bothering them for API access so it will seamlessly integrate in!
+### Authentication 
+  App uses signed session cookies. Passwords are stored as salted scrypt hashes. 
 
+  POST `<signup route>`  Creates an account
+  POST `<login route>`   Log in and establish a session 
+  POST `<logout route>`  End the current session
+
+### App Endpoints
+
+
+### External Data integrations
+
+
+### Example Requests
